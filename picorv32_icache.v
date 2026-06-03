@@ -224,7 +224,7 @@ module picorv32_icache #(
                         missed_word_index <= requested_word_index;
                         missed_replacement_way <= replacement_way;
 
-                        refill_wird_index <= 0;
+                        refill_word_index <= 0;
                         state <= CACHE_REFILL;
                     end
                     else if (c_valid && !cacheable_instruction_fetch) begin
@@ -246,6 +246,7 @@ module picorv32_icache #(
                             refill_word_index <= refill_word_index + 1'b1;
                         end
                     end
+                end
 
                 CACHE_BYPASS: begin
                     if (m_ready)

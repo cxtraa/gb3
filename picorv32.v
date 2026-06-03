@@ -2608,13 +2608,21 @@ module picorv32_axi #(
 	output        trace_valid,
 	output [35:0] trace_data
 );
-	wire        mem_valid;
-	wire [31:0] mem_addr;
-	wire [31:0] mem_wdata;
-	wire [ 3:0] mem_wstrb;
-	wire        mem_instr;
-	wire        mem_ready;
-	wire [31:0] mem_rdata;
+	wire        cpu_mem_valid;
+	wire [31:0] cpu_mem_addr;
+	wire [31:0] cpu_mem_wdata;
+	wire [ 3:0] cpu_mem_wstrb;
+	wire        cpu_mem_instr;
+	wire        cpu_mem_ready;
+	wire [31:0] cpu_mem_rdata;
+
+	wire        ext_mem_valid;
+	wire [31:0] ext_mem_addr;
+	wire [31:0] ext_mem_wdata;
+	wire [ 3:0] ext_mem_wstrb;
+	wire        ext_mem_instr;
+	wire        ext_mem_ready;
+	wire [31:0] ext_mem_rdata;
 
 	picorv32_axi_adapter axi_adapter (
 		.clk            (clk            ),
@@ -2636,13 +2644,13 @@ module picorv32_axi #(
 		.mem_axi_rvalid (mem_axi_rvalid ),
 		.mem_axi_rready (mem_axi_rready ),
 		.mem_axi_rdata  (mem_axi_rdata  ),
-		.mem_valid      (mem_valid      ),
-		.mem_instr      (mem_instr      ),
-		.mem_ready      (mem_ready      ),
-		.mem_addr       (mem_addr       ),
-		.mem_wdata      (mem_wdata      ),
-		.mem_wstrb      (mem_wstrb      ),
-		.mem_rdata      (mem_rdata      )
+		.mem_valid      (ext_mem_valid  ),
+		.mem_instr      (ext_mem_instr  ),
+		.mem_ready      (ext_mem_ready  ),
+		.mem_addr       (ext_mem_addr   ),
+		.mem_wdata      (ext_mem_wdata  ),
+		.mem_wstrb      (ext_mem_wstrb  ),
+		.mem_rdata      (ext_mem_rdata  )
 	);
 
 	picorv32 #(
@@ -2676,13 +2684,13 @@ module picorv32_axi #(
 		.resetn   (resetn),
 		.trap     (trap  ),
 
-		.mem_valid(mem_valid),
-		.mem_addr (mem_addr ),
-		.mem_wdata(mem_wdata),
-		.mem_wstrb(mem_wstrb),
-		.mem_instr(mem_instr),
-		.mem_ready(mem_ready),
-		.mem_rdata(mem_rdata),
+		.mem_valid(cpu_mem_valid),
+		.mem_addr (cpu_mem_addr ),
+		.mem_wdata(cpu_mem_wdata),
+		.mem_wstrb(cpu_mem_wstrb),
+		.mem_instr(cpu_mem_instr),
+		.mem_ready(cpu_mem_ready),
+		.mem_rdata(cpu_mem_rdata),
 
 		.pcpi_valid(pcpi_valid),
 		.pcpi_insn (pcpi_insn ),
@@ -2720,6 +2728,33 @@ module picorv32_axi #(
 
 		.trace_valid(trace_valid),
 		.trace_data (trace_data)
+	);
+
+	picorv32_icache #(
+		.NUM_SETS   (64),
+		.NUM_WAYS   (4),
+		.LINE_WORDS (4)
+	) icache (
+		.clk    (clk),
+		.resetn (resetn),
+
+		.c_valid(cpu_mem_valid),
+		.c_instr(cpu_mem_instr),
+		.c_ready(cpu_mem_ready),
+		.c_addr (cpu_mem_addr),
+		.c_wdata(cpu_mem_wdata),
+		.c_wstrb(cpu_mem_wstrb),
+		.c_rdata(cpu_mem_rdata),
+
+		.m_valid(ext_mem_valid),
+		.m_instr(ext_mem_instr),
+		.m_ready(ext_mem_ready),
+		.m_addr (ext_mem_addr),
+		.m_wdata(ext_mem_wdata),
+		.m_wstrb(ext_mem_wstrb),
+		.m_rdata(ext_mem_rdata),
+
+		.flush  (1'b0)
 	);
 endmodule
 
