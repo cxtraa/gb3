@@ -617,9 +617,9 @@ static uint32_t benchmark_mixed(void)
 	uint32_t r = 0;
 
 	r ^= benchmark_sort();
-	// r ^= benchmark_crc();
-	// r ^= benchmark_matrix();
-	// r ^= benchmark_footprint();
+	r ^= benchmark_crc();
+	r ^= benchmark_matrix();
+	r ^= benchmark_footprint();
 
 	return r;
 }

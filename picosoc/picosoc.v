@@ -75,7 +75,9 @@ module picosoc (
 	parameter [0:0] ENABLE_FAST_MUL = 0;
 	parameter [0:0] ENABLE_COMPRESSED = 1;
 	parameter [0:0] ENABLE_COUNTERS = 1;
+	parameter [0:0] ENABLE_IRQ = 1;
 	parameter [0:0] ENABLE_IRQ_QREGS = 0;
+	parameter [0:0] ENABLE_ICACHE = 1;
 
 	parameter integer MEM_WORDS = 256;
 	parameter [31:0] STACKADDR = (4*MEM_WORDS);       // end of memory
@@ -95,13 +97,32 @@ module picosoc (
 		irq[7] = irq_7;
 	end
 
-	wire mem_valid;
-	wire mem_instr;
-	wire mem_ready;
-	wire [31:0] mem_addr;
-	wire [31:0] mem_wdata;
-	wire [3:0] mem_wstrb;
+	wire        cpu_mem_valid;
+	wire [31:0] cpu_mem_addr;
+	wire [31:0] cpu_mem_wdata;
+	wire [ 3:0] cpu_mem_wstrb;
+	wire        cpu_mem_instr;
+	wire        cpu_mem_ready;
+	wire [31:0] cpu_mem_rdata;
+
+	wire        ext_mem_valid;
+	wire [31:0] ext_mem_addr;
+	wire [31:0] ext_mem_wdata;
+	wire [ 3:0] ext_mem_wstrb;
+	wire        ext_mem_instr;
+	wire        ext_mem_ready;
+	wire [31:0] ext_mem_rdata;
+
+	wire        mem_valid = ext_mem_valid;
+	wire        mem_instr = ext_mem_instr;
+	wire [31:0] mem_addr = ext_mem_addr;
+	wire [31:0] mem_wdata = ext_mem_wdata;
+	wire [ 3:0] mem_wstrb = ext_mem_wstrb;
+	wire        mem_ready;
 	wire [31:0] mem_rdata;
+
+	assign ext_mem_ready = mem_ready;
+	assign ext_mem_rdata = mem_rdata;
 
 	wire spimem_ready;
 	wire [31:0] spimem_rdata;
@@ -141,20 +162,60 @@ module picosoc (
 		.ENABLE_MUL(ENABLE_MUL),
 		.ENABLE_DIV(ENABLE_DIV),
 		.ENABLE_FAST_MUL(ENABLE_FAST_MUL),
-		.ENABLE_IRQ(1),
+		.ENABLE_IRQ(ENABLE_IRQ),
 		.ENABLE_IRQ_QREGS(ENABLE_IRQ_QREGS)
 	) cpu (
 		.clk         (clk        ),
 		.resetn      (resetn     ),
-		.mem_valid   (mem_valid  ),
-		.mem_instr   (mem_instr  ),
-		.mem_ready   (mem_ready  ),
-		.mem_addr    (mem_addr   ),
-		.mem_wdata   (mem_wdata  ),
-		.mem_wstrb   (mem_wstrb  ),
-		.mem_rdata   (mem_rdata  ),
+		.mem_valid   (cpu_mem_valid),
+		.mem_instr   (cpu_mem_instr ),
+		.mem_ready   (cpu_mem_ready ),
+		.mem_addr    (cpu_mem_addr  ),
+		.mem_wdata   (cpu_mem_wdata ),
+		.mem_wstrb   (cpu_mem_wstrb ),
+		.mem_rdata   (cpu_mem_rdata ),
 		.irq         (irq        )
 	);
+
+	generate
+		if (ENABLE_ICACHE) begin
+			picorv32_icache #(
+				.NUM_SETS   (16),
+				.NUM_WAYS   (1),
+				.LINE_WORDS (1)
+			) icache (
+				.clk    (clk),
+				.resetn (resetn),
+
+				.c_valid(cpu_mem_valid),
+				.c_instr(cpu_mem_instr),
+				.c_ready(cpu_mem_ready),
+				.c_addr (cpu_mem_addr),
+				.c_wdata(cpu_mem_wdata),
+				.c_wstrb(cpu_mem_wstrb),
+				.c_rdata(cpu_mem_rdata),
+
+				.m_valid(ext_mem_valid),
+				.m_instr(ext_mem_instr),
+				.m_ready(ext_mem_ready),
+				.m_addr (ext_mem_addr),
+				.m_wdata(ext_mem_wdata),
+				.m_wstrb(ext_mem_wstrb),
+				.m_rdata(ext_mem_rdata),
+
+				.flush  (1'b0)
+			);
+		end else begin
+			assign ext_mem_valid = cpu_mem_valid;
+			assign ext_mem_instr = cpu_mem_instr;
+			assign ext_mem_addr = cpu_mem_addr;
+			assign ext_mem_wdata = cpu_mem_wdata;
+			assign ext_mem_wstrb = cpu_mem_wstrb;
+
+			assign cpu_mem_ready = ext_mem_ready;
+			assign cpu_mem_rdata = ext_mem_rdata;
+		end
+	endgenerate
 
 	spimemio spimemio (
 		.clk    (clk),
@@ -259,4 +320,3 @@ module picosoc_mem #(
 		if (wen[3]) mem[addr][31:24] <= wdata[31:24];
 	end
 endmodule
-

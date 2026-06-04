@@ -10,10 +10,10 @@ hx8ksim: hx8kdemo_tb.vvp hx8kdemo_fw.hex
 hx8ksynsim: hx8kdemo_syn_tb.vvp hx8kdemo_fw.hex
 	vvp -N $< +firmware=hx8kdemo_fw.hex
 
-hx8kdemo.json: hx8kdemo.v spimemio.v simpleuart.v picosoc.v ../picorv32.v
+hx8kdemo.json: hx8kdemo.v spimemio.v simpleuart.v picosoc.v ../picorv32.v ../picorv32_icache.v
 	yosys -ql hx8kdemo.log -p 'synth_ice40 -top hx8kdemo -json hx8kdemo.json' $^
 
-hx8kdemo_tb.vvp: hx8kdemo_tb.v hx8kdemo.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v
+hx8kdemo_tb.vvp: hx8kdemo_tb.v hx8kdemo.v spimemio.v simpleuart.v picosoc.v ../picorv32.v ../picorv32_icache.v spiflash.v
 	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v` -DNO_ICE40_DEFAULT_ASSIGNMENTS
 
 hx8kdemo_syn_tb.vvp: hx8kdemo_tb.v hx8kdemo_syn.v spiflash.v
@@ -56,10 +56,10 @@ icebsim: icebreaker_tb.vvp icebreaker_fw.hex
 icebsynsim: icebreaker_syn_tb.vvp icebreaker_fw.hex
 	vvp -N $< +firmware=icebreaker_fw.hex
 
-icebreaker.json: icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc.v ../picorv32.v
+icebreaker.json: icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc.v ../picorv32.v ../picorv32_icache.v
 	yosys -ql icebreaker.log -p 'synth_ice40 -dsp -top icebreaker -json icebreaker.json' $^
 
-icebreaker_tb.vvp: icebreaker_tb.v icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v
+icebreaker_tb.vvp: icebreaker_tb.v icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc.v ../picorv32.v ../picorv32_icache.v spiflash.v
 	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v` -DNO_ICE40_DEFAULT_ASSIGNMENTS
 
 icebreaker_syn_tb.vvp: icebreaker_tb.v icebreaker_syn.v spiflash.v
@@ -69,7 +69,7 @@ icebreaker_syn.v: icebreaker.json
 	yosys -p 'read_json icebreaker.json; write_verilog icebreaker_syn.v'
 
 icebreaker.asc: icebreaker.pcf icebreaker.json
-	nextpnr-ice40 --freq 13 --up5k --package sg48 --asc icebreaker.asc --pcf icebreaker.pcf --json icebreaker.json
+	nextpnr-ice40 --freq 12 --up5k --package sg48 --asc icebreaker.asc --pcf icebreaker.pcf --json icebreaker.json
 
 icebreaker.bin: icebreaker.asc
 	icetime -d up5k -c 12 -mtr icebreaker.rpt icebreaker.asc
@@ -104,7 +104,7 @@ spiflash_tb.vvp: spiflash.v spiflash_tb.v
 
 # ---- ASIC Synthesis Tests ----
 
-cmos.log: spimemio.v simpleuart.v picosoc.v ../picorv32.v
+cmos.log: spimemio.v simpleuart.v picosoc.v ../picorv32.v ../picorv32_icache.v
 	yosys -l cmos.log -p 'synth -top picosoc; abc -g cmos2; opt -fast; stat' $^
 
 # ---- Clean ----
