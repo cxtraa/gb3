@@ -180,7 +180,7 @@ module picosoc (
 	generate
 		if (ENABLE_ICACHE) begin
 			picorv32_icache #(
-				.NUM_SETS   (16),
+				.NUM_SETS   (128),
 				.NUM_WAYS   (1),
 				.LINE_WORDS (1)
 			) icache (
