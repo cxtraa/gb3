@@ -73,11 +73,9 @@ module picosoc (
 	parameter [0:0] ENABLE_MUL = 1;
 	parameter [0:0] ENABLE_DIV = 1;
 	parameter [0:0] ENABLE_FAST_MUL = 0;
-	parameter [0:0] ENABLE_COMPRESSED = 0;
+	parameter [0:0] ENABLE_COMPRESSED = 1;
 	parameter [0:0] ENABLE_COUNTERS = 1;
-	parameter [0:0] ENABLE_IRQ = 1;
 	parameter [0:0] ENABLE_IRQ_QREGS = 0;
-	parameter [0:0] ENABLE_ICACHE = 1;
 
 	parameter integer MEM_WORDS = 256;
 	parameter [31:0] STACKADDR = (4*MEM_WORDS);       // end of memory
@@ -97,32 +95,13 @@ module picosoc (
 		irq[7] = irq_7;
 	end
 
-	wire        cpu_mem_valid;
-	wire [31:0] cpu_mem_addr;
-	wire [31:0] cpu_mem_wdata;
-	wire [ 3:0] cpu_mem_wstrb;
-	wire        cpu_mem_instr;
-	wire        cpu_mem_ready;
-	wire [31:0] cpu_mem_rdata;
-
-	wire        ext_mem_valid;
-	wire [31:0] ext_mem_addr;
-	wire [31:0] ext_mem_wdata;
-	wire [ 3:0] ext_mem_wstrb;
-	wire        ext_mem_instr;
-	wire        ext_mem_ready;
-	wire [31:0] ext_mem_rdata;
-
-	wire        mem_valid = ext_mem_valid;
-	wire        mem_instr = ext_mem_instr;
-	wire [31:0] mem_addr = ext_mem_addr;
-	wire [31:0] mem_wdata = ext_mem_wdata;
-	wire [ 3:0] mem_wstrb = ext_mem_wstrb;
-	wire        mem_ready;
+	wire mem_valid;
+	wire mem_instr;
+	wire mem_ready;
+	wire [31:0] mem_addr;
+	wire [31:0] mem_wdata;
+	wire [3:0] mem_wstrb;
 	wire [31:0] mem_rdata;
-
-	assign ext_mem_ready = mem_ready;
-	assign ext_mem_rdata = mem_rdata;
 
 	wire spimem_ready;
 	wire [31:0] spimem_rdata;
@@ -144,8 +123,6 @@ module picosoc (
 	wire        simpleuart_reg_dat_sel = mem_valid && (mem_addr == 32'h 0200_0008);
 	wire [31:0] simpleuart_reg_dat_do;
 	wire        simpleuart_reg_dat_wait;
-	wire [31:0] simpleuart_scaled_div = mem_wdata + (mem_wdata >> 2) + (mem_wdata >> 4) +
-			(mem_wdata >> 6) + {31'b0, |mem_wdata[5:4]};
 
 	assign mem_ready = (iomem_valid && iomem_ready) || spimem_ready || ram_ready || spimemio_cfgreg_sel ||
 			simpleuart_reg_div_sel || (simpleuart_reg_dat_sel && !simpleuart_reg_dat_wait);
@@ -164,58 +141,20 @@ module picosoc (
 		.ENABLE_MUL(ENABLE_MUL),
 		.ENABLE_DIV(ENABLE_DIV),
 		.ENABLE_FAST_MUL(ENABLE_FAST_MUL),
-		.ENABLE_IRQ(ENABLE_IRQ),
+		.ENABLE_IRQ(1),
 		.ENABLE_IRQ_QREGS(ENABLE_IRQ_QREGS)
 	) cpu (
 		.clk         (clk        ),
 		.resetn      (resetn     ),
-		.mem_valid   (cpu_mem_valid),
-		.mem_instr   (cpu_mem_instr ),
-		.mem_ready   (cpu_mem_ready ),
-		.mem_addr    (cpu_mem_addr  ),
-		.mem_wdata   (cpu_mem_wdata ),
-		.mem_wstrb   (cpu_mem_wstrb ),
-		.mem_rdata   (cpu_mem_rdata ),
+		.mem_valid   (mem_valid  ),
+		.mem_instr   (mem_instr  ),
+		.mem_ready   (mem_ready  ),
+		.mem_addr    (mem_addr   ),
+		.mem_wdata   (mem_wdata  ),
+		.mem_wstrb   (mem_wstrb  ),
+		.mem_rdata   (mem_rdata  ),
 		.irq         (irq        )
 	);
-
-	generate
-		if (ENABLE_ICACHE) begin
-			picorv32_icache #(
-				.NUM_SETS   (256)
-			) icache (
-				.clk    (clk),
-				.resetn (resetn),
-
-				.c_valid(cpu_mem_valid),
-				.c_instr(cpu_mem_instr),
-				.c_ready(cpu_mem_ready),
-				.c_addr (cpu_mem_addr),
-				.c_wdata(cpu_mem_wdata),
-				.c_wstrb(cpu_mem_wstrb),
-				.c_rdata(cpu_mem_rdata),
-
-				.m_valid(ext_mem_valid),
-				.m_instr(ext_mem_instr),
-				.m_ready(ext_mem_ready),
-				.m_addr (ext_mem_addr),
-				.m_wdata(ext_mem_wdata),
-				.m_wstrb(ext_mem_wstrb),
-				.m_rdata(ext_mem_rdata),
-
-				.flush  (1'b0)
-			);
-		end else begin
-			assign ext_mem_valid = cpu_mem_valid;
-			assign ext_mem_instr = cpu_mem_instr;
-			assign ext_mem_addr = cpu_mem_addr;
-			assign ext_mem_wdata = cpu_mem_wdata;
-			assign ext_mem_wstrb = cpu_mem_wstrb;
-
-			assign cpu_mem_ready = ext_mem_ready;
-			assign cpu_mem_rdata = ext_mem_rdata;
-		end
-	endgenerate
 
 	spimemio spimemio (
 		.clk    (clk),
@@ -256,7 +195,7 @@ module picosoc (
 		.ser_rx      (ser_rx      ),
 
 		.reg_div_we  (simpleuart_reg_div_sel ? mem_wstrb : 4'b 0000),
-		.reg_div_di  (simpleuart_scaled_div),
+		.reg_div_di  (mem_wdata),
 		.reg_div_do  (simpleuart_reg_div_do),
 
 		.reg_dat_we  (simpleuart_reg_dat_sel ? mem_wstrb[0] : 1'b 0),
@@ -320,3 +259,4 @@ module picosoc_mem #(
 		if (wen[3]) mem[addr][31:24] <= wdata[31:24];
 	end
 endmodule
+

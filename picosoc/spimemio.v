@@ -105,10 +105,10 @@ module spimemio (
 			config_clk <= 0;
 			config_oe <= 0;
 			config_do <= 0;
-			config_ddr <= 0;
-			config_qspi <= 0;
-			config_cont <= 0;
-			config_dummy <= 8;
+			config_ddr <= 1;
+			config_qspi <= 1;
+			config_cont <= 1;
+			config_dummy <= 7;
 		end else begin
 			if (cfgreg_we[0]) begin
 				config_csb <= cfgreg_di[5];
