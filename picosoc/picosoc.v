@@ -144,8 +144,7 @@ module picosoc (
 	wire        simpleuart_reg_dat_sel = mem_valid && (mem_addr == 32'h 0200_0008);
 	wire [31:0] simpleuart_reg_dat_do;
 	wire        simpleuart_reg_dat_wait;
-	wire [31:0] simpleuart_scaled_div = mem_wdata + (mem_wdata >> 2) + (mem_wdata >> 4) +
-			(mem_wdata >> 6) + {31'b0, |mem_wdata[5:4]};
+	wire [31:0] simpleuart_scaled_div = mem_wdata + (mem_wdata >> 1) + (mem_wdata >> 5);
 
 	assign mem_ready = (iomem_valid && iomem_ready) || spimem_ready || ram_ready || spimemio_cfgreg_sel ||
 			simpleuart_reg_div_sel || (simpleuart_reg_dat_sel && !simpleuart_reg_dat_wait);
@@ -165,7 +164,8 @@ module picosoc (
 		.ENABLE_DIV(ENABLE_DIV),
 		.ENABLE_FAST_MUL(ENABLE_FAST_MUL),
 		.ENABLE_IRQ(ENABLE_IRQ),
-		.ENABLE_IRQ_QREGS(ENABLE_IRQ_QREGS)
+		.ENABLE_IRQ_QREGS(ENABLE_IRQ_QREGS),
+		.BARREL_SHIFTER(BARREL_SHIFTER)
 	) cpu (
 		.clk         (clk        ),
 		.resetn      (resetn     ),

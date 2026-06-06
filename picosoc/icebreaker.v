@@ -55,8 +55,8 @@ module icebreaker (
 	SB_PLL40_PAD #(
 		.FEEDBACK_PATH("SIMPLE"),
 		.DIVR(4'b0000),
-		.DIVF(7'b1010100),
-		.DIVQ(3'b110),
+		.DIVF(7'b0110000),
+		.DIVQ(3'b101),
 		.FILTER_RANGE(3'b001)
 	) pll (
 		.PACKAGEPIN(clk),
