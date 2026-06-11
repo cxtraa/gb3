@@ -78,6 +78,9 @@ module picosoc (
 	parameter [0:0] ENABLE_IRQ = 1;
 	parameter [0:0] ENABLE_IRQ_QREGS = 0;
 	parameter [0:0] ENABLE_ICACHE = 1;
+	parameter integer ICACHE_NUM_SETS = 128;
+	parameter integer ICACHE_NUM_WAYS = 1;
+	parameter integer ICACHE_LINE_WORDS = 1;
 
 	parameter integer MEM_WORDS = 256;
 	parameter [31:0] STACKADDR = (4*MEM_WORDS);       // end of memory
@@ -144,7 +147,6 @@ module picosoc (
 	wire        simpleuart_reg_dat_sel = mem_valid && (mem_addr == 32'h 0200_0008);
 	wire [31:0] simpleuart_reg_dat_do;
 	wire        simpleuart_reg_dat_wait;
-	wire [31:0] simpleuart_scaled_div = mem_wdata + (mem_wdata >> 1) + (mem_wdata >> 5);
 
 	assign mem_ready = (iomem_valid && iomem_ready) || spimem_ready || ram_ready || spimemio_cfgreg_sel ||
 			simpleuart_reg_div_sel || (simpleuart_reg_dat_sel && !simpleuart_reg_dat_wait);
@@ -164,8 +166,7 @@ module picosoc (
 		.ENABLE_DIV(ENABLE_DIV),
 		.ENABLE_FAST_MUL(ENABLE_FAST_MUL),
 		.ENABLE_IRQ(ENABLE_IRQ),
-		.ENABLE_IRQ_QREGS(ENABLE_IRQ_QREGS),
-		.BARREL_SHIFTER(BARREL_SHIFTER)
+		.ENABLE_IRQ_QREGS(ENABLE_IRQ_QREGS)
 	) cpu (
 		.clk         (clk        ),
 		.resetn      (resetn     ),
@@ -182,7 +183,9 @@ module picosoc (
 	generate
 		if (ENABLE_ICACHE) begin
 			picorv32_icache #(
-				.NUM_SETS   (256)
+				.NUM_SETS   (1),
+				.NUM_WAYS   (64),
+				.LINE_WORDS (1)
 			) icache (
 				.clk    (clk),
 				.resetn (resetn),
@@ -256,7 +259,7 @@ module picosoc (
 		.ser_rx      (ser_rx      ),
 
 		.reg_div_we  (simpleuart_reg_div_sel ? mem_wstrb : 4'b 0000),
-		.reg_div_di  (simpleuart_scaled_div),
+		.reg_div_di  (mem_wdata),
 		.reg_div_do  (simpleuart_reg_div_do),
 
 		.reg_dat_we  (simpleuart_reg_dat_sel ? mem_wstrb[0] : 1'b 0),

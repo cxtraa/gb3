@@ -823,7 +823,11 @@ void main()
 	set_flash_qspi_flag();
 
 	reg_leds = 127;
-	while (getchar_prompt("Press ENTER to continue..\n") != '\r') { /* wait */ }
+	while (1) {
+		char c = getchar_prompt("Press ENTER to continue..\n");
+		if (c == '\r' || c == '\n')
+			break;
+	}
 
 	print("\n");
 	print("  ____  _          ____         ____\n");

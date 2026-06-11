@@ -1,5 +1,5 @@
 
-CROSS=riscv64-unknown-elf-
+CROSS?=riscv64-unknown-elf-
 CFLAGS=
 
 # ---- iCE40 HX8K Breakout Board ----
@@ -23,7 +23,7 @@ hx8kdemo_syn.v: hx8kdemo.json
 	yosys -p 'read_json hx8kdemo.json; write_verilog hx8kdemo_syn.v'
 
 hx8kdemo.asc: hx8kdemo.pcf hx8kdemo.json
-	nextpnr-ice40 --hx8k --package ct256 --asc hx8kdemo.asc --json hx8kdemo.json --pcf hx8kdemo.pcf
+	nextpnr-ice40 --freq 12 --hx8k --package ct256 --asc hx8kdemo.asc --json hx8kdemo.json --pcf hx8kdemo.pcf
 
 hx8kdemo.bin: hx8kdemo.asc
 	icetime -d hx8k -c 12 -mtr hx8kdemo.rpt hx8kdemo.asc
